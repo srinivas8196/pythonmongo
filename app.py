@@ -6,18 +6,21 @@ from pymongo import MongoClient
 ##set up the DB
 ## set up the collections /objects / models
 
-dbclient = MongoClient('URL')
-db = dbclient['ecommerce']
-products_collection = db['products']
+dbclient = MongoClient('mongodb+srv://batch6:herovired@cluster0.aqifkg2.mongodb.net/')
+db = dbclient['pythonshop']
+products_collection = db['pythonshop']
+order_collection = db['pyshoporders']
+cart_collection = db['pyshopcarts']
+
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'
+# app.secret_key = 'your_secret_key'
 
-products = {
-    1: {'name': 'Product 1', 'price': 10.99, 'description': 'Description 1', 'image_url': 'image1.jpg'},
-    2: {'name': 'Product 2', 'price': 19.99, 'description': 'Description 2', 'image_url': 'image2.jpg'},
-    3: {'name': 'Product 3', 'price': 7.99, 'description': 'Description 3', 'image_url': 'image3.jpg'}
-}
+# products = {
+#     1: {'name': 'Product 1', 'price': 10.99, 'description': 'Description 1', 'image_url': 'image1.jpg'},
+#     2: {'name': 'Product 2', 'price': 19.99, 'description': 'Description 2', 'image_url': 'image2.jpg'},
+#     3: {'name': 'Product 3', 'price': 7.99, 'description': 'Description 3', 'image_url': 'image3.jpg'}
+# }
 
 cart = {}
 orders = []
@@ -29,8 +32,8 @@ def index():
 @app.route('/products', methods=['GET'])
 def get_products():
     ##database query from MongoDB
-    result = products_collection.find({},{"_id" :0})
-    return jsonify(products=products)
+    products = list(products_collection.find({}, {'_id': 0}))
+    return(jsonify(products))
 
 #JSON data
 # {
@@ -43,22 +46,24 @@ def get_products():
 @app.route('/products', methods=['POST'])
 def add_product():
     product = request.get_json()
-    product_id = len(products) + 1
-    products[product_id] = product
+    # product_id = len(products) + 1
+    ## products[product_id] = product
+    products_collection.insert_one(product)
     return jsonify(message=f"Product '{product['name']}' added successfully!")
 
 @app.route('/products/<int:product_id>', methods=['PUT'])
 def update_product(product_id):
-    if product_id in products:
+    if product_id in products_collection:
         product = request.get_json()
-        products[product_id] = product
+        products_collection.update_one({},{'_id':0},set(product))
+        # products[product_id] = product
         return jsonify(message=f"Product with ID '{product_id}' updated successfully!")
     else:
         return jsonify(error=f"Product with ID '{product_id}' does not exist!")
 
 @app.route('/cart/add/<int:product_id>', methods=['POST'])
 def add_to_cart(product_id):
-    product = products.get(product_id)
+    product = products_collection.get(product_id)
     if product:
         if 'cart' not in session:
             session['cart'] = {}
